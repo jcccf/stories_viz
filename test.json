@@ -1,0 +1,18 @@
+{
+  "nodes":[
+    {"name":"Once upon a time, there lived a band of animals!", "group": 0, "stroke":4},
+    {"name":"Now, which was the most important of them all?", "group": 1, "stroke": 2},
+    {"name":"Jane is a squirrel!", "group": 2, "stroke": 2},
+    {"name":"Ariel is a kitten!", "group": 2, "stroke": 2},
+    {"name":"To their dismay, a large chicken abducted one of them.", "group": 1, "stroke": 2},
+    {"name":"How will we find them again?", "group": 2, "stroke": 2},
+    {"name":"There was an owl, a whale and a squirrel.", "group": 1, "stroke": 2}
+  ], "links":[
+    {"source":0,"target":1,"value":1},
+    {"source":1,"target":2,"value":1},
+    {"source":1,"target":3,"value":1},
+    {"source":0,"target":4,"value":1},
+    {"source":4,"target":5,"value":1},
+    {"source":0,"target":6,"value":1}
+  ]
+}

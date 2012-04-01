@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script type="text/javascript" src="http://mbostock.github.com/d3/d3.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+<style type="text/css">
+.link { stroke: #ccc; }
+.nodetext { pointer-events: none; font: 10px sans-serif; }
+svg {
+  margin: auto;
+}
+#edit_dialog {
+  position: fixed;
+  background-color: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  left: 50%;
+  top: 50%;
+  z-index: 999;
+  margin-top: -90px;
+  margin-left: -160px;
+  display: table;
+  width: 320px;
+  height: 180px;
+}
+#edit_dialog div{
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+</style>
+
+<script>
+var activeNode = null;
+$().ready(function() {
+  $('#edit_dialog').hide();
+  $('#edit_dialog_button').click(function() {
+    activeNode.name = $('#edit_dialog_text').val();
+    $('#edit_dialog').hide();
+    supdate();
+  });
+});
+function openEditDialog(d) {
+  activeNode = d;
+  $('#edit_dialog_text').val(d.name);
+  $('#edit_dialog').show();
+}
+
+$().ready(function() {
+  $('#add_something').click(function() {
+    jnodes.push({"name":"Waggy!", "group": 0, "stroke":2});
+    jlinks.push({"source":0,"target":7,"value":1});
+    supdate();
+  });
+});
+</script>
+</head>
+
+<body>
+
+<script type="text/javascript">
+// Original code courtesy of http://bl.ocks.org/1846692
+var w = 1280,
+    h = 720,
+    color = d3.scale.category20(),
+    jnodes, jlinks,
+    link, node,
+    nodeCircles, nodePaths, linkObjs;
+var vis = d3.select("body").append("svg:svg")
+    .attr("width", w)
+    .attr("height", h);
+
+// Pan and Zoom
+// http://groups.google.com/group/d3-js/browse_thread/thread/346e75ba083fba4b
+vis.append("rect") 
+  .attr("width", "100%") 
+  .attr("height", "100%") 
+  .attr("fill", "#fcfcfc") 
+  .call(d3.behavior.zoom() 
+    .on("zoom", function() { 
+      vis.attr("transform", "translate(" + d3.event.translate + 
+        ")scale(" + d3.event.scale + ")"); 
+   })); 
+vis = vis.append("g"); 
+
+// Force Layout
+var force = self.force = d3.layout.force()
+  .gravity(.05)
+  .distance(200)
+  .charge(function(d) { return -3000/(d.group+1); })
+  .size([w, h]);
+force.on("tick", function() {
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+  node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+});
+
+// Ajax Call
+d3.json("test.json", function(json) {
+  jnodes = json.nodes;
+  jlinks = json.links;
+  supdate();
+});
+
+function supdate() {
+  force.nodes(jnodes).links(jlinks).start(); // Restart force layout
+
+  // Node Additions
+  linkObjs = vis.selectAll("line.link")
+    .data(jlinks)
+    .enter().append("svg:line");
+  linkUpdateHelper();
+  vis.selectAll("line.link").data(jlinks).exit().remove();
+  
+  // Node Updates
+  linkObjs = vis.selectAll("line.link")
+    .data(jlinks)
+    .selectAll("line");
+  linkUpdateHelper();
+
+  // Node Additions
+  node = vis.selectAll("g.node")
+    .data(jnodes)
+    .enter().append("svg:g")
+    .attr("class", "node")
+    .call(force.drag);
+  nodeCircles = node.append("circle");
+  nodePaths = node.append("path");
+  updateHelper();
+  vis.selectAll("g.node").data(jnodes).exit().remove();
+  
+  // Node Updates
+  node = vis.selectAll("g.node")
+    .data(jnodes).call(force.drag);
+  nodeCircles = node.selectAll("circle");
+  nodePaths = node.selectAll("path");
+  updateHelper();
+
+  link = vis.selectAll("line.link");  
+  node = vis.selectAll("g.node");
+}
+
+function linkUpdateHelper() {
+  linkObjs.attr("class", "link")
+    .attr("x1", function(d) { return d.source.x; })
+    .attr("y1", function(d) { return d.source.y; })
+    .attr("x2", function(d) { return d.target.x; })
+    .attr("y2", function(d) { return d.target.y; });
+}
+
+function updateHelper() {
+  // Set Circle
+  nodeCircles
+    .attr("class", "circle")
+    .attr("r", 50)
+    .attr("fill", "white")
+    .attr("stroke", function(d) { return color(d.group); })
+    .attr("stroke-width", function(d) { return d.stroke+"px"; })
+    .on("click", openEditDialog);
+  
+  node.selectAll("text").remove(); // Clear all existing text
+  
+  // Set Text
+  node.each(function(d) {
+    var curr = d3.select(this);
+    var words = d.name.replace(/^\s+|\s+$/g,"").split(" ");
+    var lineArray = [];
+    var numWords = Math.sqrt(words.length) | 0 + 1;
+    var numLines = Math.ceil(words.length / numWords);
+    var textElt = curr.append("svg:text")
+     .attr("class", "nodetext")
+     .attr("dx", 0).attr("y", "-"+numLines*16/2+"px")
+     .attr("text-anchor", "middle")
+     .style("font-size", "16px");
+    var index = 0;
+    while(index < words.length) {
+     var tempWords = "";
+     for (var j = 0; j < numWords; j++) {
+       if (j + index < words.length) {
+         tempWords += words[j+index]+" ";
+       }
+     }
+     var tempNode = textElt.append("svg:tspan").text(tempWords).attr("dy", "1em").attr("x", 0);
+     index += numWords;
+    }
+    d.radius = Math.max(textElt.node().getBBox().width, textElt.node().getBBox().height) / 2 + 8;
+  });
+   
+  // Set Real Radius (can only do this after we've determined how large the text box is)
+  node.selectAll("circle").attr("r", function(d) { return d.radius; } );
+   
+  // Set Arc
+  nodePaths
+    .attr("d", d3.svg.arc()
+     .innerRadius(function(d) { return d.radius+d.stroke+1; })
+     .outerRadius(function(d) { return d.radius+d.stroke+3; })
+     .startAngle(0).endAngle(2*Math.PI))
+    .style("fill", function(d) { return color(d.group); })
+    .style("stroke", function(d) { return color(d.group); });
+}
+
+</script>
+<input type="button" id="add_something" value="Add" />
+<div id="edit_dialog">
+  <div>
+    <textarea id="edit_dialog_text"></textarea><br />
+    <input type="button" id="edit_dialog_button" value="Edit" />
+  </div>
+</div>
+
+</body>
+</html>
